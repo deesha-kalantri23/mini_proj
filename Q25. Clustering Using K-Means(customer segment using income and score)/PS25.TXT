@@ -1,125 +1,79 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+import pandas as pd import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler from sklearn.cluster
+import KMeans
 
-# 1. Load the dataset
-df = pd.read_csv("/content/Mall_Customers - Mall_Customers.csv")
+1. Load the full Mall Customers dataset
 
-print("First 5 records:")
-print(df.head())
+df = pd.read_csv(“/content/Mall_Customers - Mall_Customers.csv”)
 
-# 2. Inspect the dataset
-print("\nDataset Shape:", df.shape)
+print(“First 5 records:”) print(df.head())
 
-print("\nMissing Values:")
-print(df.isnull().sum())
+2. Inspect data and missing values
 
-print("\nSummary Statistics:")
-print(df.describe())
+print(“Shape:”, df.shape) print(“Values:”) print(df.isnull().sum())
 
-# Visualize feature distributions
-df[["Age", "Annual Income (k$)", "Spending Score (1-100)"]].hist(
-    figsize=(10, 5), bins=10
-)
-plt.suptitle("Customer Feature Distributions")
-plt.tight_layout()
-plt.show()
+print(“Statistics:”) print(df.describe())
 
-# 3. Select features for clustering
-X = df[["Annual Income (k$)", "Spending Score (1-100)"]]
+Visualize feature distributions
 
-# Handle missing values if present
-X = X.fillna(X.mean())
+df.hist(figsize=(8, 4), bins=10) plt.suptitle(“Customer Feature
+Distributions”) plt.tight_layout() plt.show()
 
-# Scale the features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+3. Select and scale features
 
-# 4. Elbow Method to find the optimal K
-inertias = []  # Inertia measures how close data points are to their assigned cluster centroids.
+CHANGE HERE if your dataset uses different column names
 
-for k in range(1, 8):
-    model = KMeans(
-        n_clusters=k,
-        random_state=42,
-        n_init=10  # Runs K-Means 10 times with different initial centroid positions and keeps the best result
-    )
-    model.fit(X_scaled)
-    inertias.append(model.inertia_)
+X = df[[“Annual Income (k$)”, “Spending Score (1-100)”]]
 
-plt.figure(figsize=(8, 5))
-plt.plot(range(1, 8), inertias, marker="o")
-plt.xlabel("Number of Clusters (K)")
-plt.ylabel("Inertia")
-plt.title("Elbow Method")
-plt.xticks(range(1, 8))
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+scaler = StandardScaler() X_scaled = scaler.fit_transform(X)
 
-# 5. Apply K-Means clustering
-# Choose K after inspecting the elbow plot: look for where inertia starts decreasing more slowly.
-k = int(input("Enter the selected number of clusters K: "))
+4. Elbow method
 
-if k < 2 or k > 7:
-    raise ValueError("K must be between 2 and 7.")
+inertias = []
 
-kmeans = KMeans(
-    n_clusters=k,
-    random_state=42,
-    n_init=10
-)
+for k in range(1, 8): model = KMeans(n_clusters=k, random_state=42,
+n_init=10) model.fit(X_scaled) inertias.append(model.inertia_)
 
-df["Cluster"] = kmeans.fit_predict(X_scaled)
+plt.plot(range(1, 8), inertias, marker=“o”) plt.xlabel(“Number of
+Clusters (K)”) plt.ylabel(“Inertia”) plt.title(“Elbow Method”)
+plt.xticks(range(1, 8)) plt.grid(True) plt.show()
 
-# Convert centroid coordinates back to original units
+5. Fit K-Means using a selected K
+
+Choose K after inspecting the elbow plot.
+
+k = int(input(“Enter the selected number of clusters K:”))
+
+if k < 1 or k > 7: raise ValueError(“K must be between 1 and 7.”)
+
+kmeans = KMeans(n_clusters=k, random_state=42, n_init=10) df[“Cluster”]
+= kmeans.fit_predict(X_scaled)
+
+Convert centroids back to original units
+
 centroids = scaler.inverse_transform(kmeans.cluster_centers_)
 
-# 6. Visualize the clusters and centroids
-plt.figure(figsize=(9, 6))
+6. Plot clusters and centroids
 
-for cluster in sorted(df["Cluster"].unique()):
-    cluster_data = df[df["Cluster"] == cluster]
+plt.figure(figsize=(8, 5))
 
-    plt.scatter(
-        cluster_data["Annual Income (k$)"],
-        cluster_data["Spending Score (1-100)"],
-        label=f"Cluster {cluster}"
-    )
+for cluster in sorted(df[“Cluster”].unique()): cluster_data =
+df[df[“Cluster”] == cluster] plt.scatter( cluster_data[“Annual Income
+(k$)”], cluster_data[“Spending Score (1-100)”], label=f”Cluster
+{cluster}” )
 
-plt.scatter(
-    centroids[:, 0],  # income coordinates
-    centroids[:, 1],  # spending coordinates
-    marker="X",
-    s=250,
-    color="black",
-    label="Centroids"
-)
+plt.scatter( centroids[:, 0], centroids[:, 1], marker=“X”, s=250,
+color=“black”, label=“Centroids” )
 
-plt.xlabel("Annual Income (k$)")
-plt.ylabel("Spending Score (1-100)")
-plt.title("Customer Segmentation Using K-Means")
-plt.legend()
-plt.tight_layout()
-plt.show()
+plt.xlabel(“Annual Income (thousands)”) plt.ylabel(“Spending Score”)
+plt.title(“Customer Segmentation Using K-Means”) plt.legend()
+plt.tight_layout() plt.show()
 
-# 7. Describe each customer segment
-print("\nCluster Characteristics:")
+7. Describe each customer segment
 
-summary = df.groupby("Cluster").agg(
-    CustomerCount=("Cluster", "size"),
-    AverageIncome=("Annual Income (k$)", "mean"),
-    AverageSpending=("Spending Score (1-100)", "mean")
-).round(2)
+print(“Characteristics:”) summary = df.groupby(“Cluster”).agg(
+CustomerCount=(“Cluster”, “size”), AverageIncome=(“Annual Income (k$)”,
+“mean”), AverageSpending=(“Spending Score (1-100)”, “mean”) ).round(2)
 
 print(summary)
-
-# 8. Display customers with their assigned clusters
-print("\nCustomer Data with Cluster Labels:")
-print(df.head(10))
-
-# 9. Save the clustered dataset
-df.to_csv("Mall_Customers_Clustered.csv", index=False)
-print("\nClustered dataset saved successfully.")
