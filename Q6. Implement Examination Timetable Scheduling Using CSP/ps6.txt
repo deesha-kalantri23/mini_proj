@@ -1,0 +1,81 @@
+# --- CODE CELL ---
+
+# Examinations
+exams = ["Maths", "Physics", "Chemistry",
+         "DBMS", "OS", "Python"]
+
+# Available time slots
+slots = ["Slot 1", "Slot 2", "Slot 3", "Slot 4"]
+
+# Student enrollment records
+students = {
+    "Student1": ["Maths", "Physics", "DBMS"],
+    "Student2": ["Maths", "Chemistry", "OS"],
+    "Student3": ["Physics", "Chemistry", "Python"],
+    "Student4": ["DBMS", "OS", "Python"],
+    "Student5": ["Maths", "Python", "OS"]
+}
+
+# Find conflicting exam pairs
+conflicts = set()
+
+for subjects in students.values():
+    for i in range(len(subjects)):
+        for j in range(i + 1, len(subjects)):
+            conflicts.add(
+                tuple(sorted((subjects[i], subjects[j])))
+            )
+
+# CSP backtracking
+def is_valid(exam, slot, timetable):
+    for other_exam in timetable:
+        if (tuple(sorted((exam, other_exam))) in conflicts
+                and timetable[other_exam] == slot):
+            return False
+    return True
+
+
+def backtrack(timetable):
+    # All exams are scheduled
+    if len(timetable) == len(exams):
+        return True
+
+    # Select the next unscheduled exam
+    exam = next(e for e in exams if e not in timetable)
+
+    # Try every available slot
+    for slot in slots:
+        if is_valid(exam, slot, timetable):
+            timetable[exam] = slot
+
+            if backtrack(timetable):
+                return True
+
+            # Backtrack
+            del timetable[exam]
+
+    return False
+
+
+# Generate timetable
+timetable = {}
+
+if backtrack(timetable):
+    print("Examination Timetable:\n")
+
+    for exam in exams:
+        print(exam, ":", timetable[exam])
+
+    # Verify conflicts
+    valid = True
+
+    for exam1, exam2 in conflicts:
+        if timetable[exam1] == timetable[exam2]:
+            valid = False
+            print("Conflict:", exam1, "and", exam2)
+
+    if valid:
+        print("\nVerification: No conflicts found.")
+else:
+    print("No valid timetable possible!")
+    print("Available time slots are insufficient.")

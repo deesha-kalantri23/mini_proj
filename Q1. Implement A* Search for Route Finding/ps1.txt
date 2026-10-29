@@ -1,0 +1,92 @@
+import heapq
+
+# Weighted graph: city -> [(neighbor, distance)]
+graph = {
+    'Pune': [('Mumbai', 150), ('Nashik', 210)],
+    'Mumbai': [('Pune', 150), ('Surat', 280), ('Nashik', 170)],
+    'Nashik': [('Pune', 210), ('Mumbai', 170), ('Indore', 410)],
+    'Surat': [('Mumbai', 280), ('Vadodara', 150)],
+    'Vadodara': [('Surat', 150), ('Ahmedabad', 110)],
+    'Ahmedabad': [('Vadodara', 110), ('Udaipur', 260)],
+    'Udaipur': [('Ahmedabad', 260), ('Indore', 400)],
+    'Indore': [('Nashik', 410), ('Udaipur', 400)]
+}
+
+
+# Calculate heuristic distances to selected destination
+def calculate_heuristic(destination):
+    distances = {city: float('inf') for city in graph}
+    distances[destination] = 0
+    pq = [(0, destination)]
+
+    while pq:
+        distance, current = heapq.heappop(pq)
+
+        if distance > distances[current]:
+            continue
+
+        for neighbor, cost in graph[current]:
+            new_distance = distance + cost
+
+            if new_distance < distances[neighbor]:
+                distances[neighbor] = new_distance
+                heapq.heappush(pq, (new_distance, neighbor))
+
+    return distances
+
+
+# A* Search Algorithm
+def astar(source, destination, heuristic):
+    pq = [(heuristic[source], 0, source, [source])]
+    best_cost = {source: 0}
+    explored = []
+
+    while pq:
+        f, g, city, path = heapq.heappop(pq)
+
+        if g > best_cost.get(city, float('inf')):
+            continue
+
+        explored.append(city)
+
+        if city == destination:
+            return path, g, explored
+
+        for neighbor, distance in graph[city]:
+            new_g = g + distance
+
+            if new_g < best_cost.get(neighbor, float('inf')):
+                best_cost[neighbor] = new_g
+                new_f = new_g + heuristic[neighbor]
+
+                heapq.heappush(
+                    pq,
+                    (new_f, new_g, neighbor, path + [neighbor])
+                )
+
+    return None, float('inf'), explored
+
+
+# Accept input from user
+source = input("Enter source city: ").strip().title()
+destination = input("Enter destination city: ").strip().title()
+
+if source not in graph or destination not in graph:
+    print("Invalid city name!")
+
+else:
+    # Calculate heuristic for the selected destination
+    heuristic = calculate_heuristic(destination)
+
+    print("\nHeuristic values to", destination, ":")
+    print(heuristic)
+
+    path, cost, explored = astar(source, destination, heuristic)
+
+    if path:
+        print("\nSelected Route:", " -> ".join(path))
+        print("Total Path Cost:", cost, "km")
+        print("Nodes Explored:", explored)
+        print("Number of Nodes Explored:", len(explored))
+    else:
+        print("No route found.")

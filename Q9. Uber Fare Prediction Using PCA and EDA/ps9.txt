@@ -1,0 +1,282 @@
+# --- CODE CELL ---
+
+# UBER RIDE FARE PREDICTION USING EDA, LINEAR REGRESSION AND PCA
+
+# 1. Import libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import (
+    r2_score,
+    mean_squared_error,
+    mean_absolute_error
+)
+
+# 2. Load dataset
+df = pd.read_csv("/uber.csv")
+
+print("Dataset shape:", df.shape)
+print("\nFirst five rows:")
+print(df.head())
+
+print("\nDataset information:")
+df.info()
+
+print("\nStatistical summary:")
+print(df.describe())
+# 3. Data cleaning
+print("\nMissing values:")
+print(df.isnull().sum())
+
+print("\nDuplicate rows:", df.duplicated().sum())
+
+# Remove unnecessary columns if present
+df.drop(
+    columns=["Unnamed: 0", "key"],
+    errors="ignore",
+    inplace=True
+)
+
+# Remove missing and duplicate rows
+df.dropna(inplace=True)
+df.drop_duplicates(inplace=True)
+
+# Convert pickup datetime into datetime format
+df["pickup_datetime"] = pd.to_datetime(
+    df["pickup_datetime"],
+    errors="coerce",
+    utc=True
+)
+
+df.dropna(subset=["pickup_datetime"], inplace=True)
+
+
+# 4. Feature engineering
+df["year"] = df["pickup_datetime"].dt.year
+df["month"] = df["pickup_datetime"].dt.month
+df["day"] = df["pickup_datetime"].dt.day
+df["hour"] = df["pickup_datetime"].dt.hour
+df["day_of_week"] = df["pickup_datetime"].dt.dayofweek
+
+df.drop(columns=["pickup_datetime"], inplace=True)
+
+print("\nShape after cleaning:", df.shape)
+
+# 5. Exploratory Data Analysis (EDA)
+
+# Fare distribution
+plt.figure(figsize=(8, 5))
+plt.hist(df["fare_amount"], bins=50)
+plt.title("Distribution of Uber Fare Amount")
+plt.xlabel("Fare Amount ($)")
+plt.ylabel("Frequency")
+plt.xlim(0, 100)
+plt.show()
+
+# Correlation heatmap
+plt.figure(figsize=(10, 7))
+sns.heatmap(
+    df.corr(numeric_only=True),
+    annot=True,
+    cmap="coolwarm",
+    fmt=".2f"
+)
+plt.title("Correlation Heatmap")
+plt.show()
+
+# Fare versus pickup hour
+plt.figure(figsize=(8, 5))
+plt.scatter(
+    df["hour"],
+    df["fare_amount"],
+    alpha=0.1
+)
+plt.title("Fare Amount vs Pickup Hour")
+plt.xlabel("Pickup Hour")
+plt.ylabel("Fare Amount ($)")
+plt.ylim(0, 100)
+plt.show()
+
+# 6. Remove invalid values and outliers
+
+# Keep reasonable fare amounts
+df = df[
+    (df["fare_amount"] > 0) &
+    (df["fare_amount"] < 100)
+]
+
+# Keep valid New York City-area coordinates,
+# following the supplied practical
+df = df[
+    df["pickup_longitude"].between(-75, -72) &
+    df["pickup_latitude"].between(40, 42) &
+    df["dropoff_longitude"].between(-75, -72) &
+    df["dropoff_latitude"].between(40, 42)
+]
+
+# Remove invalid passenger counts
+df = df[df["passenger_count"] > 0]
+
+print("\nShape after outlier removal:", df.shape)
+
+# 7. Select features and target
+feature_columns = [
+    "pickup_longitude",
+    "pickup_latitude",
+    "dropoff_longitude",
+    "dropoff_latitude",
+    "passenger_count",
+    "year",
+    "month",
+    "day",
+    "hour",
+    "day_of_week"
+]
+
+X = df[feature_columns]
+y = df["fare_amount"]
+
+# 8. Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+print("\nTraining samples:", len(X_train))
+print("Testing samples:", len(X_test))
+
+# 9. Feature scaling
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 10. Linear Regression WITHOUT PCA
+model_no_pca = LinearRegression()
+
+model_no_pca.fit(X_train_scaled, y_train)
+
+y_pred_no_pca = model_no_pca.predict(X_test_scaled)
+
+r2_no_pca = r2_score(y_test, y_pred_no_pca)
+
+rmse_no_pca = np.sqrt(
+    mean_squared_error(y_test, y_pred_no_pca)
+)
+mae_no_pca = mean_absolute_error(y_test, y_pred_no_pca)
+
+print("\nLinear Regression WITHOUT PCA")
+print("R2 Score:", round(r2_no_pca, 4))
+print("RMSE:", round(rmse_no_pca, 4))
+print("MAE:", round(mae_no_pca, 4))
+
+# 11. PCA: Find explained variance
+pca_full = PCA()
+pca_full.fit(X_train_scaled)
+
+cumulative_variance = np.cumsum(
+    pca_full.explained_variance_ratio_
+)
+
+plt.figure(figsize=(8, 5))
+plt.plot(
+    range(1, len(cumulative_variance) + 1),
+    cumulative_variance,
+    marker="o"
+)
+plt.axhline(
+    y=0.95,
+    linestyle="--",
+    label="95% variance threshold"
+)
+plt.title("Cumulative Explained Variance")
+plt.xlabel("Number of Principal Components")
+plt.ylabel("Cumulative Explained Variance")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# 12. Apply PCA while retaining 95% variance
+pca = PCA(n_components=0.95)
+
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+print("\nOriginal number of features:", X_train_scaled.shape[1])
+print("Principal components retained:", pca.n_components_)
+print(
+    "Variance retained:",
+    round(pca.explained_variance_ratio_.sum() * 100, 2),
+    "%"
+)
+
+# 13. Linear Regression WITH PCA
+model_pca = LinearRegression()
+
+model_pca.fit(X_train_pca, y_train)
+
+y_pred_pca = model_pca.predict(X_test_pca)
+
+r2_pca = r2_score(y_test, y_pred_pca)
+rmse_pca = np.sqrt(
+    mean_squared_error(y_test, y_pred_pca)
+)
+mae_pca = mean_absolute_error(y_test, y_pred_pca)
+
+print("\nLinear Regression WITH PCA")
+print("R2 Score:", round(r2_pca, 4))
+print("RMSE:", round(rmse_pca, 4))
+print("MAE:", round(mae_pca, 4))
+
+# 14. Compare both models
+comparison_df = pd.DataFrame({
+    "Model": [
+        "Linear Regression - Without PCA",
+        "Linear Regression - With PCA"
+    ],
+    "R2 Score": [r2_no_pca, r2_pca],
+    "RMSE": [rmse_no_pca, rmse_pca],
+    "MAE": [mae_no_pca, mae_pca]
+})
+
+print("\nModel Comparison:")
+print(comparison_df.to_string(index=False))
+
+# 15. Actual versus predicted fares
+plt.figure(figsize=(7, 5))
+plt.scatter(
+    y_test,
+    y_pred_no_pca,
+    alpha=0.3
+)
+plt.xlabel("Actual Fare ($)")
+plt.ylabel("Predicted Fare ($)")
+plt.title("Actual vs Predicted Uber Fares (Without PCA)")
+plt.show()
+
+# 16. Predict fare for a new ride
+new_ride = pd.DataFrame([{
+    "pickup_longitude": -73.99,
+    "pickup_latitude": 40.73,
+    "dropoff_longitude": -73.98,
+    "dropoff_latitude": 40.75,
+    "passenger_count": 1,
+    "year": 2015,
+    "month": 6,
+    "day": 15,
+    "hour": 14,
+    "day_of_week": 0
+}])
+
+new_ride_scaled = scaler.transform(new_ride)
+predicted_fare = model_no_pca.predict(new_ride_scaled)
+
+print("\nPredicted Uber Fare: $", round(predicted_fare[0], 2))

@@ -1,0 +1,139 @@
+# --- CODE CELL ---
+
+# Q10: House Price Prediction Using Linear Regression
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+# 1. Load the dataset
+df = pd.read_csv("train.csv")
+
+print("Dataset shape:", df.shape)
+print("\nFirst five rows:")
+print(df.head())
+
+print("\nDataset information:")
+df.info()
+
+print("\nStatistical summary:")
+print(df.describe())
+
+# 2. Check missing values and duplicates
+print("\nMissing values:")
+print(df.isnull().sum().sort_values(ascending=False).head(15))
+
+print("\nDuplicate rows:", df.duplicated().sum())
+
+# 3. Visualize house prices
+plt.figure(figsize=(8, 5))
+plt.hist(df["SalePrice"], bins=30, edgecolor="black")
+plt.title("Distribution of House Prices")
+plt.xlabel("Sale Price")
+plt.ylabel("Frequency")
+plt.show()
+
+plt.figure(figsize=(8, 5))
+plt.scatter(df["GrLivArea"], df["SalePrice"], alpha=0.5)
+plt.title("Living Area vs House Price")
+plt.xlabel("Above Ground Living Area")
+plt.ylabel("Sale Price")
+plt.show()
+
+# 4. Remove duplicates and missing target values
+df.drop_duplicates(inplace=True)
+df.dropna(subset=["SalePrice"], inplace=True)
+
+# 5. Select useful numerical features
+features = [
+    "OverallQual",
+    "GrLivArea",
+    "GarageCars",
+    "TotalBsmtSF",
+    "FullBath",
+    "YearBuilt"
+]
+
+# Keep only rows where selected features are available
+df = df.dropna(subset=features)
+
+X = df[features]
+y = df["SalePrice"]
+
+print("\nInput features:")
+print(X.head())
+
+print("\nTarget variable:")
+print(y.head())
+
+# 6. Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+print("\nTraining samples:", len(X_train))
+print("Testing samples:", len(X_test))
+
+# 7. Scale the features
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 8. Train Linear Regression model
+model = LinearRegression()
+model.fit(X_train_scaled, y_train)
+
+print("\nLinear Regression model trained successfully!")
+
+# 9. Predict house prices
+y_pred = model.predict(X_test_scaled)
+
+print("\nFirst 10 actual prices:")
+print(y_test.head(10).to_list())
+
+print("\nFirst 10 predicted prices:")
+print(np.round(y_pred[:10], 2))
+
+# 10. Evaluate the model
+r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
+
+print("\nModel Evaluation:")
+print("R2 Score:", round(r2, 4))
+print("RMSE:", round(rmse, 2))
+print("MAE:", round(mae, 2))
+
+# 11. Compare actual and predicted prices
+comparison_df = pd.DataFrame({
+    "Actual Price": y_test.to_numpy(),
+    "Predicted Price": y_pred
+})
+
+print("\nActual vs Predicted Prices:")
+print(comparison_df.head(10).round(2))
+
+# 12. Plot actual vs predicted prices
+plt.figure(figsize=(8, 5))
+plt.scatter(y_test, y_pred, alpha=0.5)
+
+min_price = min(y_test.min(), y_pred.min())
+max_price = max(y_test.max(), y_pred.max())
+
+plt.plot(
+    [min_price, max_price],
+    [min_price, max_price],
+    "r--"
+)
+
+plt.title("Actual vs Predicted House Prices")
+plt.xlabel("Actual Price")
+plt.ylabel("Predicted Price")
+plt.show()

@@ -1,0 +1,96 @@
+import heapq
+
+# Weighted graph: location -> [(neighbor, distance)]
+graph = {
+    'Pune': [('Mumbai', 150), ('Nashik', 210)],
+    'Mumbai': [('Pune', 150), ('Surat', 280), ('Nashik', 170)],
+    'Nashik': [('Pune', 210), ('Mumbai', 170), ('Indore', 410)],
+    'Surat': [('Mumbai', 280), ('Vadodara', 150)],
+    'Vadodara': [('Surat', 150), ('Ahmedabad', 110)],
+    'Ahmedabad': [('Vadodara', 110), ('Udaipur', 260)],
+    'Udaipur': [('Ahmedabad', 260), ('Indore', 400)],
+    'Indore': [('Nashik', 410), ('Udaipur', 400)]
+}
+
+
+# Calculate heuristic distances to the selected destination
+def calculate_heuristic(destination):
+    distances = {city: float('inf') for city in graph}
+    distances[destination] = 0
+    pq = [(0, destination)]
+
+    while pq:
+        distance, current = heapq.heappop(pq)
+
+        if distance > distances[current]:
+            continue
+
+        for neighbor, cost in graph[current]:
+            new_distance = distance + cost
+
+            if new_distance < distances[neighbor]:
+                distances[neighbor] = new_distance
+                heapq.heappush(pq, (new_distance, neighbor))
+
+    return distances
+
+
+# Greedy Best-First Search
+def greedy_best_first(source, destination, heuristic):
+    # Queue stores (heuristic, current location, path, cost)
+    pq = [(heuristic[source], source, [source], 0)]
+    visited = set()
+    explored = []
+
+    while pq:
+        h, current, path, cost = heapq.heappop(pq)
+
+        if current in visited:
+            continue
+
+        visited.add(current)
+        explored.append(current)
+
+        if current == destination:
+            return path, cost, explored
+
+        for neighbor, distance in graph[current]:
+            if neighbor not in visited:
+                heapq.heappush(
+                    pq,
+                    (
+                        heuristic[neighbor],
+                        neighbor,
+                        path + [neighbor],
+                        cost + distance
+                    )
+                )
+
+    return None, float('inf'), explored
+
+
+# Accept source and destination from the user
+source = input("Enter source location: ").strip().title()
+destination = input("Enter destination location: ").strip().title()
+
+if source not in graph or destination not in graph:
+    print("Invalid location!")
+
+else:
+    # Generate heuristic values for the selected destination
+    heuristic = calculate_heuristic(destination)
+
+    print("\nHeuristic values to", destination, ":")
+    print(heuristic)
+
+    path, cost, explored = greedy_best_first(
+        source, destination, heuristic
+    )
+
+    if path:
+        print("\nSelected Route:", " -> ".join(path))
+        print("Total Path Cost:", cost, "km")
+        print("Nodes Explored:", explored)
+        print("Number of Nodes Explored:", len(explored))
+    else:
+        print("No route found.")

@@ -1,0 +1,157 @@
+# --- CODE CELL ---
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, ConfusionMatrixDisplay
+)
+
+# 1. Load dataset
+df = pd.read_csv("diabetes.csv")
+
+print("First 5 rows:")
+print(df.head())
+
+print("\nDataset information:")
+print(df.info())
+
+# 2. Check missing values
+print("\nMissing values:")
+print(df.isnull().sum())
+
+# In this dataset, zero can indicate missing measurements
+cols = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
+
+for col in cols:
+    df[col] = df[col].replace(0, float("nan"))
+    df[col] = df[col].fillna(df[col].median())
+
+print("\nMissing values after handling:")
+print(df.isnull().sum())
+
+# Check class distribution
+print("\nOutcome distribution:")
+print(df["Outcome"].value_counts())
+
+df["Outcome"].value_counts().plot(kind="bar")
+plt.title("Diabetes Class Distribution")
+plt.xlabel("Outcome (0 = No Diabetes, 1 = Diabetes)")
+plt.ylabel("Number of Patients")
+plt.show()
+
+# 3. Prepare features and target
+X = df.drop("Outcome", axis=1)
+y = df["Outcome"]
+
+# 4. Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 5. Train Decision Tree
+model = DecisionTreeClassifier(
+    criterion="gini", max_depth=3, random_state=42
+)
+model.fit(X_train, y_train)
+
+# 6. Predict test data
+y_pred = model.predict(X_test)
+
+print("\nActual vs Predicted:")
+print(pd.DataFrame({
+    "Actual": y_test.values,
+    "Predicted": y_pred
+}).head(10))
+
+# 7. Evaluate model
+print("\nAccuracy:", round(accuracy_score(y_test, y_pred), 2))
+print("Precision:", round(precision_score(y_test, y_pred, zero_division=0), 2))
+print("Recall:", round(recall_score(y_test, y_pred, zero_division=0), 2))
+print("F1-score:", round(f1_score(y_test, y_pred, zero_division=0), 2))
+
+# 8. Confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=["No Diabetes", "Diabetes"]
+)
+disp.plot(cmap="Blues")
+plt.title("Diabetes Classification Confusion Matrix")
+plt.show()
+
+# --- CODE CELL ---
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, ConfusionMatrixDisplay
+)
+
+# 1. Create dataset
+df = pd.read_csv("heart_v2.csv")
+
+# 2. Perform EDA
+print("First 5 rows:")
+print(df.head())
+
+print("\nMissing values:")
+print(df.isnull().sum())
+
+print("\nHeart disease class distribution:")
+print(df["heart disease"].value_counts())
+
+df["heart disease"].value_counts().plot(kind="bar")
+plt.title("Heart Disease Class Distribution")
+plt.xlabel("0 = No, 1 = Yes")
+plt.ylabel("Number of Patients")
+plt.show()
+
+# 3. Prepare features and target
+X = df.drop("heart disease", axis=1)
+y = df["heart disease"]
+
+# 4. Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+# 5. Train Decision Tree
+model = DecisionTreeClassifier(
+    criterion="gini", max_depth=3, random_state=42
+)
+model.fit(X_train, y_train)
+
+# 6. Predict test data
+y_pred = model.predict(X_test)
+
+print("\nActual vs Predicted:")
+print(pd.DataFrame({
+    "Actual": y_test.values,
+    "Predicted": y_pred
+}).to_string(index=False))
+
+# 7. Evaluate model
+print("\nAccuracy:", round(accuracy_score(y_test, y_pred), 2))
+print("Precision:", round(precision_score(y_test, y_pred, zero_division=0), 2))
+print("Recall:", round(recall_score(y_test, y_pred, zero_division=0), 2))
+print("F1-score:", round(f1_score(y_test, y_pred, zero_division=0), 2))
+
+# 8. Confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=["No Heart Disease", "Heart Disease"]
+)
+disp.plot(cmap="Blues")
+plt.title("Heart Disease Confusion Matrix")
+plt.show()

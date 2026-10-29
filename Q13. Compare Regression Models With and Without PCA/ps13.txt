@@ -1,0 +1,195 @@
+# --- CODE CELL ---
+
+# Q13: Compare Regression Models With and Without PCA
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_diabetes
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+# 1. Load the dataset
+data = load_diabetes()
+
+df = pd.DataFrame(data.data, columns=data.feature_names)
+df["target"] = data.target
+
+print("Dataset shape:", df.shape)
+print("\nFirst five rows:")
+print(df.head())
+
+print("\nDataset information:")
+df.info()
+
+print("\nStatistical summary:")
+print(df.describe())
+
+# 2. Check missing values and duplicates
+print("\nMissing values:")
+print(df.isnull().sum())
+
+print("\nDuplicate rows:", df.duplicated().sum())
+
+# 3. Perform EDA
+plt.figure(figsize=(8, 5))
+plt.hist(df["target"], bins=30, edgecolor="black")
+plt.title("Distribution of Target Values")
+plt.xlabel("Target Value")
+plt.ylabel("Frequency")
+plt.show()
+
+plt.figure(figsize=(10, 7))
+sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f")
+plt.title("Correlation Heatmap")
+plt.show()
+
+# 4. Select input features and target
+X = df.drop(columns=["target"])
+y = df["target"]
+
+print("\nInput features shape:", X.shape)
+print("Target shape:", y.shape)
+
+# 5. Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+print("\nTraining samples:", len(X_train))
+print("Testing samples:", len(X_test))
+
+# 6. Standardize the features
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 7. Train Linear Regression WITHOUT PCA
+model_no_pca = LinearRegression()
+model_no_pca.fit(X_train_scaled, y_train)
+
+y_pred_no_pca = model_no_pca.predict(X_test_scaled)
+
+r2_no_pca = r2_score(y_test, y_pred_no_pca)
+rmse_no_pca = np.sqrt(mean_squared_error(y_test, y_pred_no_pca))
+mae_no_pca = mean_absolute_error(y_test, y_pred_no_pca)
+
+print("\nLinear Regression WITHOUT PCA")
+print("R2 Score:", round(r2_no_pca, 4))
+print("RMSE:", round(rmse_no_pca, 4))
+print("MAE:", round(mae_no_pca, 4))
+
+# 8. Examine cumulative explained variance
+pca_full = PCA()
+pca_full.fit(X_train_scaled)
+
+cumulative_variance = np.cumsum(
+    pca_full.explained_variance_ratio_
+)
+
+plt.figure(figsize=(8, 5))
+plt.plot(
+    range(1, len(cumulative_variance) + 1),
+    cumulative_variance,
+    marker="o"
+)
+plt.axhline(
+    y=0.95,
+    linestyle="--",
+    label="95% variance threshold"
+)
+plt.title("Cumulative Explained Variance")
+plt.xlabel("Number of Principal Components")
+plt.ylabel("Cumulative Explained Variance")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# 9. Apply PCA, retaining 95% variance
+pca = PCA(n_components=0.95)
+
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+
+print("\nOriginal number of features:", X_train_scaled.shape[1])
+print("Principal components retained:", pca.n_components_)
+print(
+    "Variance retained:",
+    round(pca.explained_variance_ratio_.sum() * 100, 2),
+    "%"
+)
+
+# 10. Train Linear Regression WITH PCA
+model_pca = LinearRegression()
+model_pca.fit(X_train_pca, y_train)
+
+y_pred_pca = model_pca.predict(X_test_pca)
+
+r2_pca = r2_score(y_test, y_pred_pca)
+rmse_pca = np.sqrt(mean_squared_error(y_test, y_pred_pca))
+mae_pca = mean_absolute_error(y_test, y_pred_pca)
+
+print("\nLinear Regression WITH PCA")
+print("R2 Score:", round(r2_pca, 4))
+print("RMSE:", round(rmse_pca, 4))
+print("MAE:", round(mae_pca, 4))
+
+# 11. Compare both models
+comparison_df = pd.DataFrame({
+    "Model": [
+        "Linear Regression Without PCA",
+        "Linear Regression With PCA"
+    ],
+    "Number of Features": [
+        X_train_scaled.shape[1],
+        X_train_pca.shape[1]
+    ],
+    "R2 Score": [r2_no_pca, r2_pca],
+    "RMSE": [rmse_no_pca, rmse_pca],
+    "MAE": [mae_no_pca, mae_pca]
+})
+
+print("\nModel Comparison:")
+print(comparison_df.to_string(index=False))
+
+# 12. Plot actual vs predicted values without PCA
+plt.figure(figsize=(8, 5))
+plt.scatter(y_test, y_pred_no_pca, alpha=0.6)
+
+min_value = min(y_test.min(), y_pred_no_pca.min())
+max_value = max(y_test.max(), y_pred_no_pca.max())
+
+plt.plot(
+    [min_value, max_value],
+    [min_value, max_value],
+    "r--"
+)
+
+plt.title("Actual vs Predicted (Without PCA)")
+plt.xlabel("Actual Target")
+plt.ylabel("Predicted Target")
+plt.show()
+
+# 13. Plot actual vs predicted values with PCA
+plt.figure(figsize=(8, 5))
+plt.scatter(y_test, y_pred_pca, alpha=0.6)
+
+min_value = min(y_test.min(), y_pred_pca.min())
+max_value = max(y_test.max(), y_pred_pca.max())
+
+plt.plot(
+    [min_value, max_value],
+    [min_value, max_value],
+    "r--"
+)
+
+plt.title("Actual vs Predicted (With PCA)")
+plt.xlabel("Actual Target")
+plt.ylabel("Predicted Target")
+plt.show()

@@ -1,0 +1,76 @@
+def solve_n_queens(N):
+    # Each index represents a row; value represents the column
+    board = [-1] * N
+
+    def is_safe(row, col):
+        for prev_row in range(row):
+            prev_col = board[prev_row]
+
+            # Check same column
+            if prev_col == col:
+                return False
+
+            # Check diagonal
+            if abs(prev_col - col) == abs(prev_row - row):
+                return False
+
+        return True
+
+    def backtrack(row):
+        # All queens have been placed
+        if row == N:
+            return True
+
+        for col in range(N):
+            if is_safe(row, col):
+                board[row] = col
+
+                if backtrack(row + 1):
+                    return True
+
+                # Backtrack: remove the queen
+                board[row] = -1
+
+        return False
+
+    if backtrack(0):
+        print("\nSolution found!")
+
+        for row in range(N):
+            for col in range(N):
+                if board[row] == col:
+                    print("Q", end=" ")
+                else:
+                    print(".", end=" ")
+            print()
+
+        print("\nVerification:")
+
+        valid = True
+        for r1 in range(N):
+            for r2 in range(r1 + 1, N):
+                c1 = board[r1]
+                c2 = board[r2]
+
+                if c1 == c2 or abs(c1 - c2) == abs(r1 - r2):
+                    valid = False
+
+        if valid:
+            print("No two queens share a column or diagonal.")
+            print("Each row contains exactly one queen.")
+            print("Board is valid.")
+
+        return True
+
+    else:
+        print("No solution found!")
+        return False
+
+
+# Accept input
+N = int(input("Enter N (minimum 4): "))
+
+if N < 4:
+    print("Please enter N >= 4.")
+else:
+    solve_n_queens(N)

@@ -1,0 +1,86 @@
+# --- CODE CELL ---
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+# Step 1: Load the Mall Customers dataset
+# Keep Mall_Customers.csv in the same folder as this program
+data = pd.read_csv("Mall_Customers.csv")
+
+print("First five records:")
+print(data.head())
+
+# Step 2: Select features for clustering
+X = data[["Annual Income (k$)", "Spending Score (1-100)"]]
+
+# Step 3: Standardize the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Apply the Elbow Method
+inertia = []
+
+for k in range(1, 11):
+    model = KMeans(n_clusters=k, random_state=42, n_init=10)
+    model.fit(X_scaled)
+    inertia.append(model.inertia_)
+
+plt.figure(figsize=(7, 4))
+plt.plot(range(1, 11), inertia, marker="o")
+plt.xlabel("Number of Clusters (K)")
+plt.ylabel("Inertia")
+plt.title("Elbow Method")
+plt.grid(True)
+plt.show()
+
+# Step 4: Fit K-Means
+# K = 5 is a commonly used choice for this dataset
+k = 5
+kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+data["Cluster"] = kmeans.fit_predict(X_scaled)
+
+# Convert centroids back to original feature scales
+centroids = scaler.inverse_transform(kmeans.cluster_centers_)
+
+# Step 5: Plot clusters and centroids
+plt.figure(figsize=(8, 5))
+
+for cluster in range(k):
+    cluster_data = data[data["Cluster"] == cluster]
+
+    plt.scatter(
+        cluster_data["Annual Income (k$)"],
+        cluster_data["Spending Score (1-100)"],
+        label=f"Cluster {cluster}",
+        s=50
+    )
+
+plt.scatter(
+    centroids[:, 0],
+    centroids[:, 1],
+    marker="X",
+    s=250,
+    color="red",
+    label="Centroids"
+)
+
+plt.xlabel("Annual Income (k$)")
+plt.ylabel("Spending Score (1-100)")
+plt.title("Mall Customer Segmentation")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Step 6: Count customers in each cluster
+print("\nNumber of customers in each cluster:")
+print(data["Cluster"].value_counts().sort_index())
+
+# Display cluster profiles
+print("\nAverage income and spending score per cluster:")
+print(
+    data.groupby("Cluster")[
+        ["Annual Income (k$)", "Spending Score (1-100)"]
+    ].mean().round(2)
+)
